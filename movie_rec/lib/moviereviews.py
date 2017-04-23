@@ -14,15 +14,12 @@ class MovieReviews(object):
             return [line.rstrip() for line in f]
 
     def critic_rating_mapping(self):
-        return dict([
-            (critic, self.ratings_for_critic(critic))
-            for critic in self.critics
-        ])
+        ratings = {}
 
-    def ratings_for_critic(self, critic):
-        return dict([
-            (review['movie'], int(review['rating']))
-            for review in self.reviews
-            if critic == review['critic']
-        ])
+        for review in self.reviews:
+            critic_name = review['critic']
+            critic_ratings = ratings.get(critic_name, {})
+            critic_ratings.update({ review['movie']: int(review['rating']) })
+            ratings[critic_name] = critic_ratings
 
+        return ratings
