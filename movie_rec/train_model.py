@@ -7,14 +7,25 @@ from lib.mlhelper import create_inputs_matrix, create_test_inputs_matrix, create
 from lib.multi_class import one_vs_all, predict_all
 from lib.Timer import Timer
 
-def load_data(filename):
-    with open(filename) as f:
-        return [line.rstrip() for line in f]
-
 
 def save_data(data, output):
     with open(output, 'w') as f:
         f.write(json.dumps(dict(data)))
+
+def train_and_predict(X_train, X_test, Y, num_classifications, options, lmbda):
+    print "\nfor lambda value", lmbda
+
+    print "calculating theta"
+    all_theta = one_vs_all(X, Y, num_classifications, lmbda)
+    timer.interval('Calculated theta')
+
+    print "predicting"
+    hypothesis = predict_all(X_test, all_theta)
+    timer.interval('Made prediction')
+
+    print "saving hypothesis"
+    save_data(zip(movies, hypothesis), options.output + "/hypothesis_" + str(lmbda))
+    timer.interval('Finished Saving')
 
 
 if __name__ == '__main__':
@@ -63,19 +74,7 @@ if __name__ == '__main__':
     )
     timer.interval('Created test inputs matrix')
 
-    # output <- params, ML formatted data
-    learning_rate = 1
-    num_classifications = 2
-
-    print "calculating theta"
-    all_theta = one_vs_all(X, Y, num_classifications, learning_rate)
-    timer.interval('Calculated theta')
-
-    print "predicting"
-    hypothesis = predict_all(X_test, all_theta)
-    timer.interval('Made prediction')
-
-    print "saving hypothesis"
-    save_data(zip(movies, hypothesis), options.output)
-    timer.interval('Finished Saving')
-
+    lmbdas = [0, 0.01, 0.03, 0.1, 0.3, 1.0]
+    print "\ntraining and predicting for lambda values:", lmbdas
+    for lmbda in lmbdas:
+        train_and_predict(X, X_test, Y, 2, options, lmbda)
