@@ -74,7 +74,7 @@ if __name__ == '__main__':
     )
     timer.interval('Created test inputs matrix')
 
-    lmbdas = [0, 0.01, 0.03, 0.1, 0.3, 1.0]
+    lmbdas = [0, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 9.0, 30.0]
     print "\ntraining and predicting for lambda values:", lmbdas
     for lmbda in lmbdas:
         train_and_predict(X, X_test, Y, 2, options, lmbda)
