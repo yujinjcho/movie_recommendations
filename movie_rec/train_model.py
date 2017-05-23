@@ -4,10 +4,9 @@ from optparse import OptionParser
 
 from lib.MovieReviews import MovieReviews
 from lib.ModelTrainer import ModelTrainer
-from lib.mlhelper import create_inputs_matrix, create_test_inputs_matrix, create_target_matrix
-import lib.logistic_regression
-import lib.random_forest
 from lib.Timer import Timer
+
+from sklearn.datasets import load_svmlight_file
 
 
 if __name__ == '__main__':
@@ -35,32 +34,16 @@ if __name__ == '__main__':
     )
     timer.interval('Loaded Data')
 
-    print "creating inputs matrix"
-    X = create_inputs_matrix(
-        movie_reviews.seen_movies,
-        movie_reviews.critics,
-        movie_reviews.critic_ratings
-    )
-    timer.interval('Loaded X-matrix')
+    print "converting to arrays"
+    X, Y = load_svmlight_file('training.svm')
+    movies = movie_reviews.all_movies
+    X_predict, _ = load_svmlight_file('predict.svm')
+    timer.interval('converted to arrays')
 
-    print "creating target matrix"
-    Y = create_target_matrix(
-        movie_reviews.seen_movies,
-        movie_reviews.liked_movies
-    )
-    timer.interval('Loaded y-matrix')
+    model_trainer = ModelTrainer(X, Y, movies, timer)
+    model_trainer.calc_metrics()
 
-    print "creating test inputs matrix"
-    movies, X_test = create_test_inputs_matrix(
-        movie_reviews.critics,
-        movie_reviews.critic_ratings
-    )
-    timer.interval('Created test inputs matrix')
+    model_trainer.train_and_predict(X_predict)
+    model_trainer.save('predictions.json')
 
-    model_trainer = ModelTrainer(X, X_test, movies, Y, timer)
-    # lmbdas = [0, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0]
-    # model_trainer.train_and_predict('logistic_regression', lmbdas)
 
-    min_leaves = [1, 5, 10, 20, 50, 100, 200]
-    model_trainer.train_and_predict('random_forest', min_leaves)
-    model_trainer.save(options.output)
