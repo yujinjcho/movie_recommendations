@@ -1,1 +1,1 @@
-web: cd movie_rec && gunicorn movie_rec:app
+web: gunicorn movie_rec.start_server:app 
