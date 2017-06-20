@@ -18,7 +18,7 @@ class RateViewController: UIViewController {
     @IBOutlet weak var titleImage: UIImageView!
     @IBAction func rateLikeButton(_ sender: UIButton) {
         print("Like Pressed")
-        processRating(ratingType: "Like")
+        processRating(ratingType: "1")
     }
     
     @IBAction func rateSkipButton(_ sender: UIButton) {
@@ -28,7 +28,7 @@ class RateViewController: UIViewController {
     }
     @IBAction func rateDislikeButton(_ sender: UIButton) {
         print("Dislike Pressed")
-        processRating(ratingType: "Dislike")
+        processRating(ratingType: "-1")
 
     }
     
@@ -39,15 +39,23 @@ class RateViewController: UIViewController {
         
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // pass ratings from RateViewController to RecommendationsViewController
+        if let recommendationsTableViewController = segue.destination as? RecommendationsTableViewController {
+            recommendationsTableViewController.ratings = ratings
+        }
+    }
+    
     //MARK: Private Methods
     private func loadSampleMovies() {
 
         
-        let movie1 = Movie(title: "Alien Covenant", photoUrl: "https://resizing.flixster.com/IYbhKwXYWq1-xziwFgGpu5gasvM=/206x305/v1.bTsxMjM0NTY3NjtqOzE3MzMyOzEyMDA7NTM5OzgwMA")
-        let movie2 = Movie(title: "Blame!", photoUrl: "https://resizing.flixster.com/g7JF5as1fPNkUt-JmEv-vYv-Auk=/206x305/v1.bTsxMjExOTczMTtqOzE3MzMwOzEyMDA7MTEwOzE1NA")
-        let movie3 = Movie(title: "Guardians of the Galaxy 2", photoUrl: "https://resizing.flixster.com/POuQse1wJTE5kT-HsfwT9pIWRbI=/206x305/v1.bTsxMjMyMzE1NjtwOzE3MzMyOzEyMDA7NTkxOzg3Ng")
-        let movie4 = Movie(title: "Logan", photoUrl: "https://resizing.flixster.com/0E6Et1Fi6wFzN9PFWdZdyIl2H_c=/206x305/v1.bTsxMjMwNDQ4NDtqOzE3MzMyOzEyMDA7NjI2OzkyNA")
+        let movie1 = Movie(title: "Eye of the Beast", movieId: "770674011", photoUrl: "https://resizing.flixster.com/l33YTQ7OQjckGzyjz4Or2B5M7IY=/322x462/v1.bTsxMDgzOTc5MDtqOzE3NDE1OzIwNDg7MzIyOzQ2Mg")
+        let movie2 = Movie(title: "Befikre", movieId: "771455920", photoUrl: "https://resizing.flixster.com/LFD-HnXFLYFpvihrAJdNF9XkG3s=/799x1066/v1.bTsxMjI0ODk3MztqOzE3Mzk0OzIwNDg7MjE4NzsyOTE2")
+        let movie3 = Movie(title: "Hotel Reserve", movieId: "771046771", photoUrl: "https://resizing.flixster.com/1yzqLJeMc-OFV-_XiyLoIt0l_GI=/400x611/v1.bTsxMjA4ODk2NDtqOzE3NDAzOzIwNDg7NDAwOzYxMQ")
+        let movie4 = Movie(title: "Nostradamus", movieId: "770680114", photoUrl: "https://resizing.flixster.com/C8R3lhW9v_Ec4RFn5BClTIoOZ5Q=/597x796/v1.bTsxMTU0NDIxNztqOzE3NDIwOzIwNDg7NTk3Ozc5Ng")
         movies += [movie1, movie2, movie3, movie4]
+        
     }
     
     private func loadMovie() {
@@ -58,24 +66,16 @@ class RateViewController: UIViewController {
         titleNameLabel.text = currentMovie.title
         
         // set photo to be movie
-        // titleImage.image = currentMovie.photo
-        let url = URL(string: currentMovie.photoUrl)
-        // titleImage.image = UIImage(data: data!)
-        
-        DispatchQueue.global().async {
-            let data = try? Data(contentsOf: url!)
-            DispatchQueue.main.async {
-                self.titleImage.image = UIImage(data: data!)
-            }
-        }
+        titleImage.contentMode = .scaleAspectFill
+        titleImage.clipsToBounds = true
+        titleImage.image = currentMovie.movieImage
     }
     
     private func processRating(ratingType: String) {
         // create rating
         let currentMovie = movies[0]
-        let deviceId = UIDevice.current.identifierForVendor!.uuidString
 
-        let rating = Rating(title: currentMovie.title, rating: ratingType, deviceId: deviceId)
+        let rating = Rating(movieId: currentMovie.movieId, rating: ratingType)
         ratings += [rating]
         
         movies.remove(at: 0)
@@ -83,10 +83,7 @@ class RateViewController: UIViewController {
             loadSampleMovies()
         }
         loadMovie()
-
     }
-
-
 
 }
 
