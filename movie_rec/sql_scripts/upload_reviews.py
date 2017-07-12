@@ -2,15 +2,18 @@ import sys
 import json
 import psycopg2
 from optparse import OptionParser
+from config import db_config
+
 
 parser = OptionParser()
 parser.add_option("-i", "--input", dest="input", metavar="FILE",
                           help="name of upload file")
 (options, args) = parser.parse_args()
 
-conn = psycopg2.connect("dbname=movie_rec")
+conn = psycopg2.connect(**db_config)
 cur = conn.cursor()
 count = 0
+total = 870796
 
 with open(options.input) as f:
     for line in f:
@@ -27,16 +30,8 @@ with open(options.input) as f:
             movie_id = result[0]
             user_id = data['critic']
             rating = data['rating']
+            print json.dumps({'movie_id':movie_id, 'user_id': user_id, 'rating': rating})
     
-            upload_query = """INSERT INTO ratings (user_id, movie_id, rating) 
-                              VALUES (%s, %s, %s)
-            """
-            upload_data = (user_id, movie_id, rating)
-            cur.execute(upload_query, upload_data)
-        
-        count += 1
-        if count % 10000 == 0:
-            print count
    
 conn.commit()
 cur.close()

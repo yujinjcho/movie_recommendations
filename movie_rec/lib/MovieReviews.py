@@ -1,3 +1,4 @@
+import os
 import json
 import StringIO
 from collections import defaultdict
@@ -22,9 +23,17 @@ class MovieReviews(object):
 
 
     def load_reviews(self):
-        conn = psycopg2.connect('dbname=movie_rec') 
+        conn = psycopg2.connect(
+           dbname=os.environ['DBNAME'],
+           user=os.environ['PGUSER'],
+           password=os.environ['PGPASSWORD'],
+           port=os.environ['PGPORT'],
+           host=os.environ['PGHOST']
+        )
+        
+
         cur = conn.cursor()  
-        query = """select movie_id, user_id, rating from ratings"""
+        query = """select rotten_id, user_id, rating from ratings where rating != '0'"""
         cur.execute(query)
         results = cur.fetchall()
         cur.close()
@@ -37,9 +46,16 @@ class MovieReviews(object):
 
 
     def load_movies(self, classification, target_user):
-        conn = psycopg2.connect('dbname=movie_rec') 
+        conn = psycopg2.connect(
+            dbname=os.environ['DBNAME'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD'],
+            port=os.environ['PGPORT'],
+            host=os.environ['PGHOST']
+        )
+        
         cur = conn.cursor()  
-        query = """select movie_id from ratings
+        query = """select rotten_id from ratings
                  where user_id = %s and 
                  rating = %s"""
         query_data = (target_user, classification)

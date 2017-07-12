@@ -2,13 +2,14 @@ import sys
 import json
 from optparse import OptionParser
 import psycopg2
+from config import db_config
 
 parser = OptionParser()
 parser.add_option("-i", "--input", dest="input", metavar="FILE",
                   help="name of upload file")
 (options, args) = parser.parse_args()
 
-conn = psycopg2.connect("dbname=movie_rec")
+conn = psycopg2.connect(**db_config)
 cur = conn.cursor()
 
 with open(options.input) as f:
