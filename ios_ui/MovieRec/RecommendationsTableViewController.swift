@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import Foundation
+import SwiftyJSON
 
 protocol Delegate: class {
     func clearRatings()
@@ -19,6 +21,8 @@ class RecommendationsTableViewController: UITableViewController {
     var recommendations = [Recommendation]()
     var userId = "test_user_03"
     weak var delegate: Delegate?
+    var timer: DispatchSourceTimer?
+
     
 
     @IBAction func refreshBarButton(_ sender: Any) {
@@ -66,21 +70,60 @@ class RecommendationsTableViewController: UITableViewController {
         makeAPICall()
     }
     
-    private func refreshMovies(data: Data) -> Void {
-        let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
-        self.recommendations.removeAll()
-        if let responseJSON = responseJSON as? [String: [String]] {
-            for recommendation in responseJSON["recommendations"]! {
-                self.recommendations += [Recommendation(title: recommendation)]
-            }
-
-            DispatchQueue.main.async {
-                self.tableView.reloadData()
-            }
+    private func refreshMovies(data: JSON) -> Void {
+        for recommendation in data.arrayValue {
+            self.recommendations += [Recommendation(title: recommendation.stringValue)]
         }
+
+        DispatchQueue.main.async {
+            self.tableView.reloadData()
+        }
+        
         self.ratings.removeAll()
         delegate?.clearRatings()
         print(ratings.count)
+    }
+    
+    private func startJobPolling(data: Data) -> Void {
+        let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
+        if let responseJSON = responseJSON as? [String: String] {
+            print(responseJSON["job_id"]!)
+            startTimer(job_id: responseJSON["job_id"]!)
+        }
+    }
+    
+    private func checkJobStatus(data: Data) -> Void {
+        let json = JSON(data: data)
+        if json["status"].stringValue == "completed" {
+            print("job IS completed")
+            if let dataFromString = json["results"].stringValue.data(using: .utf8, allowLossyConversion: false) {
+                let results = JSON(data: dataFromString)
+                refreshMovies(data: results)
+            }
+            stopTimer()
+        } else {
+            print("job not completed")
+        }
+    }
+    
+    
+    func startTimer(job_id: String) {
+        let queue = DispatchQueue(label: "com.domain.app.timer")
+        timer = DispatchSource.makeTimerSource(queue: queue)
+        timer!.scheduleRepeating(deadline: .now(), interval: .seconds(5))
+        timer!.setEventHandler { [weak self] in
+            let url = "api/job_poll/" + job_id
+            NetworkController.getRequest(endPoint: url, completionHandler: self!.checkJobStatus, user: nil)
+
+            // figure out how to keep running even if move out of view controller
+            
+        }
+        timer!.resume()
+    }
+
+    func stopTimer() {
+        timer?.cancel()
+        timer = nil
     }
     
     private func makeAPICall() {
@@ -93,7 +136,8 @@ class RecommendationsTableViewController: UITableViewController {
         })
         
         let postData : [String: Any] = ["user_id": userId, "ratings": uploadRatings]
-        NetworkController.postRequest(endPoint: "api/recommendations", postData: postData, completionHandler: refreshMovies)
+        NetworkController.postRequest(endPoint: "api/recommendations", postData: postData,
+                                      completionHandler: startJobPolling)
 
     }
 
