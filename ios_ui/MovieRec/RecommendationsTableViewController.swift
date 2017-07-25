@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import Foundation
 import SwiftyJSON
 
 protocol Delegate: class {
@@ -22,8 +21,11 @@ class RecommendationsTableViewController: UITableViewController {
     var userId = "test_user_03"
     weak var delegate: Delegate?
     var timer: DispatchSourceTimer?
-
     
+    enum TrainingStatus: String {
+        case completed = "completed"
+    }
+
 
     @IBAction func refreshBarButton(_ sender: Any) {
         updateRecommendations()
@@ -72,10 +74,11 @@ class RecommendationsTableViewController: UITableViewController {
     
     private func refreshMovies(data: JSON) -> Void {
         for recommendation in data.arrayValue {
-            self.recommendations += [Recommendation(title: recommendation.stringValue)]
+            recommendations += [Recommendation(title: recommendation.stringValue)]
         }
 
         DispatchQueue.main.async {
+            [unowned self] in
             self.tableView.reloadData()
         }
         
@@ -94,7 +97,7 @@ class RecommendationsTableViewController: UITableViewController {
     
     private func checkJobStatus(data: Data) -> Void {
         let json = JSON(data: data)
-        if json["status"].stringValue == "completed" {
+        if json["status"].stringValue == TrainingStatus.completed.rawValue {
             print("job IS completed")
             if let dataFromString = json["results"].stringValue.data(using: .utf8, allowLossyConversion: false) {
                 let results = JSON(data: dataFromString)
@@ -109,16 +112,21 @@ class RecommendationsTableViewController: UITableViewController {
     
     func startTimer(job_id: String) {
         let queue = DispatchQueue(label: "com.domain.app.timer")
+        
         timer = DispatchSource.makeTimerSource(queue: queue)
-        timer!.scheduleRepeating(deadline: .now(), interval: .seconds(5))
-        timer!.setEventHandler { [weak self] in
+        guard let timer = timer else {
+            print("Timer couldn't be created")
+            return
+        }
+        timer.scheduleRepeating(deadline: .now(), interval: .seconds(5))
+        timer.setEventHandler { [weak self] in
             let url = "api/job_poll/" + job_id
             NetworkController.getRequest(endPoint: url, completionHandler: self!.checkJobStatus, user: nil)
 
             // figure out how to keep running even if move out of view controller
             
         }
-        timer!.resume()
+        timer.resume()
     }
 
     func stopTimer() {
