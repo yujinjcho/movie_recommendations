@@ -6,6 +6,7 @@
 //  Copyright © 2017 Yujin Cho. All rights reserved.
 //
 
+import os.log
 import UIKit
 import SwiftyJSON
 
@@ -13,31 +14,26 @@ protocol Delegate: class {
     func clearRatings()
 }
 
-class RecommendationsTableViewController: UITableViewController {
+class RecommendationsTableViewController: UITableViewController, RecTableDelegate {
 
     //MARK: Properties 
-    var ratings = [Rating]()
-    var recommendations = [Recommendation]()
-    var userId = "test_user_03"
+    var ratings: Ratings?
+    var recommendations = Recommendations()
+    var userId: String?
     weak var delegate: Delegate?
-    var timer: DispatchSourceTimer?
-    
-    enum TrainingStatus: String {
-        case completed = "completed"
-    }
-
 
     @IBAction func refreshBarButton(_ sender: Any) {
-        updateRecommendations()
+        startLoadingOverlay()
+        startRecommendationsCalculation()
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setUserID()
+        recommendations.delegate = self
     }
 
-
     // MARK: - Table view data source
-
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
@@ -52,103 +48,56 @@ class RecommendationsTableViewController: UITableViewController {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier, for: indexPath) as? MovieTableViewCell  else {
             fatalError("The dequeued cell is not an instance of MovieTableViewCell.")
         }
-        let movie = recommendations[indexPath.row]
-
-        cell.titleLabel.text = movie.title
-
+        
+        let title = recommendations.titleAtIndex(index: indexPath.row)
+        cell.titleLabel.text = title
         return cell
     }
-
     
-    
-    //MARK: Private Methods
-    
-
-    private func updateRecommendations() {
-        uploadAndUpdateRecommendations()
-    }
-    
-    private func uploadAndUpdateRecommendations() {
-        makeAPICall()
-    }
-    
-    private func refreshMovies(data: JSON) -> Void {
-        for recommendation in data.arrayValue {
-            recommendations += [Recommendation(title: recommendation.stringValue)]
-        }
-
+    func refreshTable() {
         DispatchQueue.main.async {
             [unowned self] in
             self.tableView.reloadData()
         }
         
-        self.ratings.removeAll()
+        //self.ratings.removeAll()
         delegate?.clearRatings()
-        print(ratings.count)
-    }
-    
-    private func startJobPolling(data: Data) -> Void {
-        let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
-        if let responseJSON = responseJSON as? [String: String] {
-            print(responseJSON["job_id"]!)
-            startTimer(job_id: responseJSON["job_id"]!)
-        }
-    }
-    
-    private func checkJobStatus(data: Data) -> Void {
-        let json = JSON(data: data)
-        if json["status"].stringValue == TrainingStatus.completed.rawValue {
-            print("job IS completed")
-            if let dataFromString = json["results"].stringValue.data(using: .utf8, allowLossyConversion: false) {
-                let results = JSON(data: dataFromString)
-                refreshMovies(data: results)
-            }
-            stopTimer()
-        } else {
-            print("job not completed")
-        }
-    }
-    
-    
-    func startTimer(job_id: String) {
-        let queue = DispatchQueue(label: "com.domain.app.timer")
         
-        timer = DispatchSource.makeTimerSource(queue: queue)
-        guard let timer = timer else {
-            print("Timer couldn't be created")
-            return
+        if let ratings = ratings {
+            print(ratings.count)
         }
-        timer.scheduleRepeating(deadline: .now(), interval: .seconds(5))
-        timer.setEventHandler { [weak self] in
-            let url = "api/job_poll/" + job_id
-            NetworkController.getRequest(endPoint: url, completionHandler: self!.checkJobStatus, user: nil)
-
-            // figure out how to keep running even if move out of view controller
-            
-        }
-        timer.resume()
     }
 
-    func stopTimer() {
-        timer?.cancel()
-        timer = nil
+    func endLoadingOverlay() {
+        dismiss(animated: false, completion: nil)
     }
     
-    private func makeAPICall() {
-        let uploadRatings = ratings.map({
-            (rating:Rating) -> [String:String] in
-            [
-                "movie_id": rating.value(forKey: "movieId") as! String,
-                "rating": rating.value(forKey: "rating") as! String
-            ]
-        })
+    //MARK: Private Methods
+    private func startLoadingOverlay() {
+        let alert = UIAlertController(title: nil, message: "Calculating Recommendations...", preferredStyle: .alert)
         
-        let postData : [String: Any] = ["user_id": userId, "ratings": uploadRatings]
-        NetworkController.postRequest(endPoint: "api/recommendations", postData: postData,
-                                      completionHandler: startJobPolling)
-
+        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
+        loadingIndicator.hidesWhenStopped = true
+        loadingIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyle.gray
+        loadingIndicator.startAnimating();
+        
+        alert.view.addSubview(loadingIndicator)
+        present(alert, animated: true, completion: nil)
+    }
+    
+    private func startRecommendationsCalculation() {
+        if let ratings = ratings, let userId = userId {
+            let uploadRatings = ratings.uploadFormat()
+            let postData : [String: Any] = ["user_id": userId, "ratings": uploadRatings]
+            NetworkController.postRequest(endPoint: "api/recommendations", postData: postData,
+                                          completionHandler: recommendations.startJobPolling)
+        }
     }
 
-
-    
+    private func setUserID() {
+        let retrievedID = UserDefaults.standard.string(forKey: "userID")
+        if let retrievedID = retrievedID {
+            userId = retrievedID
+        }
+    }
 }
