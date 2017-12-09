@@ -1,5 +1,8 @@
 ## movie project
 *.pyc
+archive
+.DS_Store
+movie_rec/connect_to_db
 
 
 {\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
