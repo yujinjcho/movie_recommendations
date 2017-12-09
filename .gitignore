@@ -3,6 +3,8 @@
 archive
 .DS_Store
 movie_rec/connect_to_db
+scrape_rotten/scrape.logs
+scrape_rotten/scraped_data/*
 
 
 {\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
