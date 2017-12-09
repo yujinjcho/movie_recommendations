@@ -3,6 +3,11 @@
 archive
 .DS_Store
 movie_rec/connect_to_db
+scrape_rotten/scrape.logs
+scrape_rotten/scraped_data/*
+scrape_rotten/run_docker
+scrape_rotten/test_luigi_run
+scrape_rotten/build_image
 
 
 {\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
